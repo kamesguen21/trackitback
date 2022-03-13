@@ -1,6 +1,4 @@
 # trackitback
-# Important
-
 # ASP.NET Core & EntityFramework Core Based Budget tracking Application
 
 This Application is a Budget tracking project created with ASP.NET Core, the front end project is in another [repository](https://github.com/kamesguen21/trackit)
