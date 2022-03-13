@@ -9,7 +9,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using trackitback.Models;
 using trackitback.Persistence;
-
+using trackitback.Filter;
+using trackitback.Helpers;
+using trackitback.Services;
 namespace trackitback.Controllers
 {
     [Route("api/[controller]")]
@@ -18,19 +20,39 @@ namespace trackitback.Controllers
     public class CategoriesController : ControllerBase
     {
         private readonly DatabaseContext _context;
+        private readonly IUriService uriService;
 
-        public CategoriesController(DatabaseContext context)
+        public CategoriesController(DatabaseContext context, IUriService uriService)
         {
             _context = context;
-        }
+            this.uriService = uriService;
 
+        }
+        // GET: api/Category/page
+        [HttpGet("page")]
+        public async Task<ActionResult> GetCategoryPage([FromQuery] PaginationFilter filter)
+        {
+            var route = Request.Path.Value;
+            var validFilter = new PaginationFilter(filter.PageNumber, filter.PageSize);
+            var pagedData = await _context.Category
+                .Skip((validFilter.PageNumber - 1) * validFilter.PageSize)
+                .Take(validFilter.PageSize)
+                .ToListAsync();
+            var totalRecords = await _context.Category.CountAsync();
+            var pagedReponse = PaginationHelper.CreatePagedReponse<Category>(pagedData, validFilter, totalRecords, uriService, route);
+            return Ok(pagedReponse);
+        }
         // GET: api/Categories
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Category>>> GetCategory()
         {
             return await _context.Category.ToListAsync();
         }
-
+        [HttpGet("type/{type}")]
+        public async Task<ActionResult<IEnumerable<Category>>> GetCategoryByType(string type)
+        {
+            return await _context.Category.Where(x => x.Type == type).ToListAsync();
+        }
         // GET: api/Categories/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Category>> GetCategory(int id)

@@ -9,7 +9,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using trackitback.Models;
 using trackitback.Persistence;
-
+using trackitback.Filter;
+using trackitback.Helpers;
+using trackitback.Services;
 namespace trackitback.Controllers
 {
     [Route("api/[controller]")]
@@ -18,12 +20,30 @@ namespace trackitback.Controllers
     public class GoalsController : ControllerBase
     {
         private readonly DatabaseContext _context;
+        private readonly IUriService uriService;
 
-        public GoalsController(DatabaseContext context)
+        public GoalsController(DatabaseContext context, IUriService uriService)
         {
             _context = context;
+            this.uriService = uriService;
+
         }
 
+
+        // GET: api/Goals/page
+        [HttpGet("page")]
+        public async Task<ActionResult> GetGoalsPage([FromQuery] PaginationFilter filter)
+        {
+            var route = Request.Path.Value;
+            var validFilter = new PaginationFilter(filter.PageNumber, filter.PageSize);
+            var pagedData = await _context.Goal
+                .Skip((validFilter.PageNumber - 1) * validFilter.PageSize)
+                .Take(validFilter.PageSize)
+                .ToListAsync();
+            var totalRecords = await _context.Goal.CountAsync();
+            var pagedReponse = PaginationHelper.CreatePagedReponse<Goal>(pagedData, validFilter, totalRecords, uriService, route);
+            return Ok(pagedReponse);
+        }
         // GET: api/Goals
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Goal>>> GetGoal()

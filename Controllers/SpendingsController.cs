@@ -7,8 +7,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using trackitback.Filter;
+using trackitback.Helpers;
 using trackitback.Models;
 using trackitback.Persistence;
+using trackitback.Services;
 
 namespace trackitback.Controllers
 {
@@ -18,10 +21,12 @@ namespace trackitback.Controllers
     public class SpendingsController : ControllerBase
     {
         private readonly DatabaseContext _context;
-
-        public SpendingsController(DatabaseContext context)
+        private readonly IUriService uriService;
+        public SpendingsController(DatabaseContext context, IUriService uriService)
         {
             _context = context;
+            this.uriService = uriService;
+
         }
 
         // GET: api/Spendings
@@ -30,7 +35,20 @@ namespace trackitback.Controllers
         {
             return await _context.Spending.ToListAsync();
         }
-
+        // GET: api/Spendings/page
+        [HttpGet("page")]
+        public async Task<ActionResult> GetSpendingsPage([FromQuery] PaginationFilter filter)
+        {
+            var route = Request.Path.Value;
+            var validFilter = new PaginationFilter(filter.PageNumber, filter.PageSize);
+            var pagedData = await _context.Spending
+                .Skip((validFilter.PageNumber - 1) * validFilter.PageSize)
+                .Take(validFilter.PageSize)
+                .ToListAsync();
+            var totalRecords = await _context.Spending.CountAsync();
+            var pagedReponse = PaginationHelper.CreatePagedReponse<Spending>(pagedData, validFilter, totalRecords, uriService, route);
+            return Ok(pagedReponse);
+        }
         // GET: api/Spendings/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Spending>> GetSpending(int id)

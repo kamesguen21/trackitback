@@ -7,8 +7,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using trackitback.Filter;
+using trackitback.Helpers;
 using trackitback.Models;
 using trackitback.Persistence;
+using trackitback.Services;
+using trackitback.Wrappers;
 
 namespace trackitback.Controllers
 {
@@ -18,18 +22,35 @@ namespace trackitback.Controllers
     public class IncomesController : ControllerBase
     {
         private readonly DatabaseContext _context;
+        private readonly IUriService uriService;
 
-        public IncomesController(DatabaseContext context)
+        public IncomesController(DatabaseContext context, IUriService uriService)
         {
             _context = context;
+            this.uriService = uriService;
         }
 
-        // GET: api/Incomes
+        // GET: api/Incomes/page
+        [HttpGet("page")]
+        public async Task<ActionResult> GetIncomePage([FromQuery] PaginationFilter filter)
+        {
+            var route = Request.Path.Value;
+            var validFilter = new PaginationFilter(filter.PageNumber, filter.PageSize);
+            var pagedData = await _context.Income
+                .Skip((validFilter.PageNumber - 1) * validFilter.PageSize)
+                .Take(validFilter.PageSize)
+                .ToListAsync();
+            var totalRecords = await _context.Income.CountAsync();
+            var pagedReponse = PaginationHelper.CreatePagedReponse<Income>(pagedData, validFilter, totalRecords, uriService, route);
+            return Ok(pagedReponse);
+
+        }
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Income>>> GetIncome()
         {
             return await _context.Income.ToListAsync();
         }
+
 
         // GET: api/Incomes/5
         [HttpGet("{id}")]
@@ -72,9 +93,11 @@ namespace trackitback.Controllers
                     throw;
                 }
             }
-
+           await this.UpdateCategory(income.CategoryId);
             return NoContent();
         }
+
+ 
 
         // POST: api/Incomes
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
@@ -83,6 +106,7 @@ namespace trackitback.Controllers
         {
             _context.Income.Add(income);
             await _context.SaveChangesAsync();
+            await this.UpdateCategory(income.CategoryId);
 
             return CreatedAtAction("GetIncome", new { id = income.Id }, income);
         }
@@ -99,6 +123,7 @@ namespace trackitback.Controllers
 
             _context.Income.Remove(income);
             await _context.SaveChangesAsync();
+            await this.UpdateCategory(income.CategoryId);
 
             return NoContent();
         }
@@ -106,6 +131,19 @@ namespace trackitback.Controllers
         private bool IncomeExists(int id)
         {
             return _context.Income.Any(e => e.Id == id);
+        }
+        private async Task UpdateCategory(int? CategoryId)
+        {
+            if (CategoryId != null)
+            {
+                var incomes = await _context.Income.Where(x => x.CategoryId == CategoryId).ToListAsync();
+                decimal total = 0;
+                incomes.ForEach(x => { total += x.Amount; });
+                var category = await _context.Category.FindAsync(CategoryId);
+                category.Amount = total;
+                _context.Entry(category).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
+            }
         }
     }
 }

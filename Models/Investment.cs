@@ -14,6 +14,7 @@ namespace trackitback.Models
         public DateTime DateTo { get; set; }
         public string? Description { get; set; }
         public decimal Amount { get; set; }
-        public List<Income>? Incomes { get; set; }
+        public string? Often { get; set; }
+
     }
 }

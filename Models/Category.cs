@@ -10,9 +10,9 @@ namespace trackitback.Models
         [DataType(DataType.Date)]
         public DateTime Date { get; set; }
         public string? Description { get; set; }
+        public string? Color { get; set; }
         public decimal Amount { get; set; }
-        public List<Spending>? Spendings { get; set; }
-        public List<Income>? Incomes { get; set; }
+        public string? Type { get; set; }
 
 
     }

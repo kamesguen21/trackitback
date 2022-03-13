@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using trackitback.Persistence;
 
@@ -11,9 +12,10 @@ using trackitback.Persistence;
 namespace trackitback.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20220313003939_MyFirstMigration")]
+    partial class MyFirstMigration
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -209,9 +211,6 @@ namespace trackitback.Migrations
                     b.Property<string>("Name")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Type")
-                        .HasColumnType("nvarchar(max)");
-
                     b.HasKey("Id");
 
                     b.ToTable("Category");
@@ -298,9 +297,6 @@ namespace trackitback.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Often")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Title")
@@ -469,11 +465,11 @@ namespace trackitback.Migrations
             modelBuilder.Entity("trackitback.Models.Income", b =>
                 {
                     b.HasOne("trackitback.Models.Category", "Category")
-                        .WithMany()
+                        .WithMany("Incomes")
                         .HasForeignKey("CategoryId");
 
                     b.HasOne("trackitback.Models.Investment", "Investment")
-                        .WithMany()
+                        .WithMany("Incomes")
                         .HasForeignKey("InvestmentId");
 
                     b.Navigation("Category");
@@ -488,7 +484,7 @@ namespace trackitback.Migrations
                         .HasForeignKey("BillId");
 
                     b.HasOne("trackitback.Models.Category", "Category")
-                        .WithMany()
+                        .WithMany("Spendings")
                         .HasForeignKey("CategoryId");
 
                     b.Navigation("Bill");
@@ -499,6 +495,18 @@ namespace trackitback.Migrations
             modelBuilder.Entity("trackitback.Models.Bill", b =>
                 {
                     b.Navigation("Spendings");
+                });
+
+            modelBuilder.Entity("trackitback.Models.Category", b =>
+                {
+                    b.Navigation("Incomes");
+
+                    b.Navigation("Spendings");
+                });
+
+            modelBuilder.Entity("trackitback.Models.Investment", b =>
+                {
+                    b.Navigation("Incomes");
                 });
 #pragma warning restore 612, 618
         }

@@ -9,7 +9,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using trackitback.Models;
 using trackitback.Persistence;
-
+using trackitback.Filter;
+using trackitback.Helpers;
+using trackitback.Services;
 namespace trackitback.Controllers
 {
  
@@ -19,10 +21,13 @@ namespace trackitback.Controllers
     public class BillsController : ControllerBase
     {
         private readonly DatabaseContext _context;
+        private readonly IUriService uriService;
 
-        public BillsController(DatabaseContext context)
+        public BillsController(DatabaseContext context, IUriService uriService)
         {
             _context = context;
+            this.uriService = uriService;
+
         }
 
         // GET: api/Bills
@@ -32,7 +37,20 @@ namespace trackitback.Controllers
         {
             return await _context.Bill.ToListAsync();
         }
-
+        // GET: api/Bill/page
+        [HttpGet("page")]
+        public async Task<ActionResult> GetBillPage([FromQuery] PaginationFilter filter)
+        {
+            var route = Request.Path.Value;
+            var validFilter = new PaginationFilter(filter.PageNumber, filter.PageSize);
+            var pagedData = await _context.Bill
+                .Skip((validFilter.PageNumber - 1) * validFilter.PageSize)
+                .Take(validFilter.PageSize)
+                .ToListAsync();
+            var totalRecords = await _context.Bill.CountAsync();
+            var pagedReponse = PaginationHelper.CreatePagedReponse<Bill>(pagedData, validFilter, totalRecords, uriService, route);
+            return Ok(pagedReponse);
+        }
         // GET: api/Bills/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Bill>> GetBill(int id)
